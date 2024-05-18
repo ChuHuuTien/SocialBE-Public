@@ -9,6 +9,8 @@ Chạy trên cổng 3001.
 
 ## Api
 
+Public API: https://socialbe-gbu6.onrender.com/
+
 ### Auth `/auth`
 
 -   `[POST] /login`: login.
