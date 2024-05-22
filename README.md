@@ -19,7 +19,7 @@ Public API: https://socialbe-gbu6.onrender.com/
 -   `[POST] /refresh`: refresh token.
     -   body: {accessToken: String, refreshToken: String}.
     -   result: {accessToken: String}.
--   `[POST] /registry`: đăng ký.
+-   `[POST] /register`: đăng ký.
     -   body: {email: String, firstName: String, lastName: String, password: String}.
     -   result: {email: String}.
 -   `[POST] /sendotp`: Gửi otp tới email.
