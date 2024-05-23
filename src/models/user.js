@@ -1,19 +1,23 @@
 const mongoose = require('mongoose');
+const email = require('../validate/email');
+const { ObjectId } = require('mongodb');
 const Schema = mongoose.Schema;
 
 
 const userSchema = new Schema({
-  firstName: { type: String, required: false, min: 2, max: 50, default:" "},
-  lastName: { type: String, required: true, min: 2, max: 50, },
+  name: { type: String, required: true, min: 2, max: 50, },
   email: { type: String, required: true, max: 50, unique: true, },
-  password: {type: String, minlength: 6, require:true},
-  address: {type: String, require: false},
-  avatar: {type: String, require: true, default:'https://res.cloudinary.com/dckxgux3k/image/upload/v1690426439/Avatar/avatar-icon-2_blug9u.png'},
-  coverImage: {type: String, require: false, default: ""},
-  description: {type: String, require: false, default: ""},
-  friends: [{ _id: false, type: Schema.Types.ObjectId, ref: 'user' }],
-  refreshToken: {type: String, require: false,}
-},{
+  password: { type: String, minlength: 6, require: true },
+  phone: { type: String, require: false, default: null },
+  avatar: { type: String, require: true, default: 'https://res.cloudinary.com/dckxgux3k/image/upload/v1690426439/Avatar/avatar-icon-2_blug9u.png' },
+  coverImage: { type: String, require: false, default: null },
+  description: { type: String, require: false, default: null },
+  follower: [{ _id: false, type: Schema.Types.ObjectId, ref: 'user' }],
+  following: [{ _id: false, type: Schema.Types.ObjectId, ref: 'user' }],
+  isNewAccount: { type: Boolean, require: false, default: true },
+  emailVerify: { type: Boolean, require: false, default: false },
+  refreshToken: { type: String, require: false, }
+}, {
   timestamps: true,
   collection: "users",
   versionKey: false,
@@ -40,23 +44,8 @@ userSchema.statics.getUserbyEmail = async function (email) {
  */
 userSchema.statics.getUserById = async function (userid) {
   try {
-    // const user = await this.findOne({ _id: userid } , {password: 0});
-    // return user;
-    const aggregate = await this.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(userid) }},
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'friends',
-          foreignField: '_id',
-          pipeline: [{ $project:{firstName: 1, lastName: 1, avatar: 1}}],
-          as: 'friends',
-        }
-      },
-      // { $unwind: "$friends"}
-      { $project: { password: 0, birth: 0, createdAt: 0, updatedAt: 0, refreshToken: 0}},
-    ]);
-    return aggregate[0];
+    const user = await this.findOne({ _id: userid }, { password: 0 });
+    return user;
   } catch (error) {
     throw error;
   }
@@ -67,8 +56,8 @@ userSchema.statics.getUserById = async function (userid) {
  */
 userSchema.statics.getUserByIds = async function (ids) {
   try {
-    const users = await this.find({ _id: { $in: ids } },{firstName: 1, lastName: 1, avatar: 1});
-    return users;
+    const users = await this.find({ _id: { $in: ids } }, { name: 1, avatar: 1 });
+    return users.toObject();
   } catch (error) {
     throw error;
   }
@@ -78,22 +67,8 @@ userSchema.statics.getUserByIds = async function (ids) {
  */
 userSchema.statics.getAllUser = async function () {
   try {
-    const aggregate = await this.aggregate([
-      { $match: {}},
-      // {
-      //   $lookup: {
-      //     from: 'users',
-      //     localField: 'friends',
-      //     foreignField: '_id',
-      //     pipeline: [{ $project:{firstName: 1, lastName: 1, avatar: 1}}],
-      //     as: 'friends',
-      //   }
-      // },
-      // { $unwind: "$friends"}
-
-      { $project: { password: 0, birth: 0, createdAt: 0, updatedAt: 0, refreshToken: 0, friends: 0, address: 0}},
-    ]);
-    return aggregate;
+    const allUsers = await this.find({});
+    return allUsers;
   } catch (error) {
     throw error;
   }
@@ -106,14 +81,14 @@ userSchema.statics.getAllUser = async function () {
 userSchema.statics.getFriendById = async function (id) {
   try {
     const aggregate = await this.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(id) }},
-      { $project: { _id: 0, friends: 1}},
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $project: { _id: 0, friends: 1 } },
       {
         $lookup: {
           from: 'users',
           localField: 'friends',
           foreignField: '_id',
-          pipeline: [{ $project:{firstName: 1, lastName: 1, email: 1, avatar: 1}}],
+          pipeline: [{ $project: { firstName: 1, lastName: 1, email: 1, avatar: 1 } }],
 
           as: 'friends',
         }
@@ -132,11 +107,14 @@ userSchema.statics.getFriendById = async function (id) {
  */
 userSchema.statics.createUser = async function (user) {
   try {
-      user = new this(user);
-    	await user.save()
-      return user.email;
-      
-		  
+    user = new this(user);
+    const createUserResult = await user.save();
+    const resData = createUserResult.toObject();
+    delete resData.password;
+    delete resData.updatedAt;
+    return resData;
+
+
   } catch (error) {
     throw error;
   }
@@ -145,14 +123,6 @@ userSchema.statics.createUser = async function (user) {
  * @param {String} id - id of user
  * @return {Object} - details of action performed
  */
-userSchema.statics.deleteByUserById = async function (id) {
-  try {
-    const result = await this.remove({ _id: id });
-    return result;
-  } catch (error) {
-    throw error;
-  }
-}
 
 
 
@@ -164,30 +134,30 @@ userSchema.statics.deleteByUserById = async function (id) {
  */
 userSchema.statics.updateFriend = async function (userid, friendid) {
   try {
-    const result = await this.find({_id: userid, friends: {$all: friendid}});
-    if(!result.length) {
-      await this.updateOne({_id: userid}, { $push: {friends: friendid} })
-		  return true;
-    }else {
-      await this.updateOne({_id: userid}, { $pull: {friends: friendid} })
+    const result = await this.find({ _id: userid, friends: { $all: friendid } });
+    if (!result.length) {
+      await this.updateOne({ _id: userid }, { $push: { friends: friendid } })
+      return true;
+    } else {
+      await this.updateOne({ _id: userid }, { $pull: { friends: friendid } })
       return false;
     }
-	} catch(error) {
-		return error;
-	}
+  } catch (error) {
+    return error;
+  }
 }
 
 userSchema.statics.isFriend = async function (userid, friendid) {
   try {
-    const result = await this.find({_id: userid, friends: {$all: friendid}});
-    if(!result.length) {
-		  return false;
-    }else {
+    const result = await this.find({ _id: userid, friends: { $all: friendid } });
+    if (!result.length) {
+      return false;
+    } else {
       return true;
     }
-	} catch(error) {
-		return error;
-	}
+  } catch (error) {
+    return error;
+  }
 }
 /**
  * @param {String} userid - id of user
@@ -195,25 +165,29 @@ userSchema.statics.isFriend = async function (userid, friendid) {
  */
 userSchema.statics.updateUser = async function (userid, change) {
   try {
-    await this.updateOne({ _id: userid } , change);
+    await this.updateOne({ _id: userid }, change);
     const aggregate = await this.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(userid) }},
+      { $match: { _id: new mongoose.Types.ObjectId(userid) } },
       {
         $lookup: {
           from: 'users',
           localField: 'friends',
           foreignField: '_id',
-          pipeline: [{ $project:{firstName: 1, lastName: 1, avatar: 1}}],
+          pipeline: [{ $project: { firstName: 1, lastName: 1, avatar: 1 } }],
           as: 'friends',
         }
       },
       // { $unwind: "$friends"}
-      { $project: { password: 0, birth: 0, createdAt: 0, updatedAt: 0, refreshToken: 0}},
+      { $project: { password: 0, birth: 0, createdAt: 0, updatedAt: 0, refreshToken: 0 } },
     ]);
     return aggregate[0];
   } catch (error) {
     throw error;
   }
+}
+
+userSchema.statics.deleteUser = async function (id) {
+  await this.deleteOne({ _id: { $in: id } });
 }
 
 
@@ -224,11 +198,11 @@ userSchema.statics.updateUser = async function (userid, change) {
  */
 userSchema.statics.updateRefreshToken = async function (id, refreshToken) {
   try {
-		await this.updateOne({_id: id},{ refreshToken: refreshToken } )
-		return true;
-	} catch {
-		return false;
-	}
+    await this.updateOne({ _id: id }, { refreshToken: refreshToken })
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -252,11 +226,11 @@ userSchema.statics.getUserToChangePass = async function (userid) {
  */
 userSchema.statics.updatePassword = async function (userid, newPassword) {
   try {
-		await this.updateOne({_id: userid},{ password: newPassword } )
-		return true;
-	} catch {
-		return false;
-	}
+    await this.updateOne({ _id: userid }, { password: newPassword })
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 module.exports = mongoose.model('User', userSchema);

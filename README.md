@@ -62,6 +62,13 @@ Public API: https://socialbe-gbu6.onrender.com/
             avatar: String
             }]
         }.
+
+-   `[DELETE] /delete`: xoá người dùng theo id.
+    -   query: {id: String}
+    -   result: {
+        message: String, 
+        }.
+
 -   `[GET] /:id/friend`: get danh sách bạn.
     -   param: {id: String}.
     -   result: {

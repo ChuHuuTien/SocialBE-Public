@@ -7,23 +7,46 @@ const authMethod = require('../methods/auth');
 exports.isAuth = async (req, res, next) => {
 	// Lấy access token từ header
 	const accessTokenFromHeader = req.headers['authorization'];
-	if (!accessTokenFromHeader) {
-		return res.status(401).json({message:'Không tìm thấy access token!'});
+	if (accessTokenFromHeader) {
+		//token from bearer token
+		const token = accessTokenFromHeader.split(' ')[1];
+		if (!token) {
+			return res.status(401).json({ message: 'Forbiden' });
+		} else {
+			const accessTokenSecret =
+				process.env.ACCESS_TOKEN_SECRET || jwtVariable.accessTokenSecret;
+
+			const verified = await authMethod.verifyToken(
+				token,
+				accessTokenSecret,
+			);
+			if (!verified) {
+				return res.status(401).json({ message: 'unauthorized' });
+			} else {
+				req.user = verified.payload;
+
+				return next();
+			}
+		}
 	}
+	// if (!accessTokenFromHeader) {
+	// 	return res.status(401).json({ message: 'Không tìm thấy access token!' });
+	// } else {
 
-	const accessTokenSecret =
-		process.env.ACCESS_TOKEN_SECRET || jwtVariable.accessTokenSecret;
+	// 	const accessTokenSecret =
+	// 		process.env.ACCESS_TOKEN_SECRET || jwtVariable.accessTokenSecret;
 
-	const verified = await authMethod.verifyToken(
-		accessTokenFromHeader,
-		accessTokenSecret,
-	);
-	if (!verified) {
-		return res.status(401).json({message:'Bạn không có quyền truy cập vào tính năng này!'});
-	}
-	
-	// email, userid
-	req.user = verified.payload; 
+	// 	const verified = await authMethod.verifyToken(
+	// 		accessTokenFromHeader,
+	// 		accessTokenSecret,
+	// 	);
+	// 	if (!verified) {
+	// 		return res.status(401).json({ message: 'Bạn không có quyền truy cập vào tính năng này!' });
+	// 	}
 
-	return next();
+	// 	// email, userid
+	// 	req.user = verified.payload;
+
+	// 	return next();
+	// }
 };
