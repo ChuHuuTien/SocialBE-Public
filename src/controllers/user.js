@@ -123,16 +123,16 @@ class userController {
 
   // [POST] /user/postUpdateUser
   async postUpdateUser(req, res, next) {
-    const userid = req.user.userid;
+    const id = req.query.id;
     const body = req.body;
-    const oldimage = req.body.avatar;
+    const oldAvatar = req.body.avatar;
     try {
-      if (req.body.image) {
+      if (req.body.avatar) {
         const regex = /upload\/(?:v\d+\/)?([^\.]+)/
-        const match = regex.exec(oldimage);
+        const match = regex.exec(oldAvatar);
         let public_id;
         if (match == null) {
-          const uploadedResponse = await cloudinary.uploader.upload(req.body.image, {
+          const uploadedResponse = await cloudinary.uploader.upload(req.body.avatar, {
             upload_preset: 'avatar',
           })
           body.avatar = uploadedResponse.url;
@@ -140,13 +140,13 @@ class userController {
           public_id = match[1];
         }
         if (public_id == "Avatar/avatar-icon-2_blug9u") {
-          const uploadedResponse = await cloudinary.uploader.upload(req.body.image, {
+          const uploadedResponse = await cloudinary.uploader.upload(req.body.oldAvatar, {
             upload_preset: 'avatar',
             folder: 'Avatar',
           })
           body.avatar = uploadedResponse.secure_url;
         } else {
-          const uploadedResponse = await cloudinary.uploader.upload(req.body.image, {
+          const uploadedResponse = await cloudinary.uploader.upload(req.body.avatar, {
             upload_preset: 'avatar',
             // folder: 'Avatar',
             invalidate: true,
@@ -155,7 +155,7 @@ class userController {
           body.avatar = uploadedResponse.url;
         }
       }
-      const user = await User.updateUser(userid, body);
+      const user = await User.updateUser(id, body);
       if (user) {
         res.status(200).json({ message: "Update user success", user: user });
       } else res.status(400).json({ message: "Update user fail" });

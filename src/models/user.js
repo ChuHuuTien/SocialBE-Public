@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const email = require('../validate/email');
 const { ObjectId } = require('mongodb');
+const { refreshToken } = require('../controllers/auth');
 const Schema = mongoose.Schema;
 
 
@@ -67,7 +68,7 @@ userSchema.statics.getUserByIds = async function (ids) {
  */
 userSchema.statics.getAllUser = async function () {
   try {
-    const allUsers = await this.find({});
+    const allUsers = await this.find({}, { password: 0, refreshToken: 0 });
     return allUsers;
   } catch (error) {
     throw error;
@@ -165,20 +166,10 @@ userSchema.statics.isFriend = async function (userid, friendid) {
  */
 userSchema.statics.updateUser = async function (userid, change) {
   try {
-    await this.updateOne({ _id: userid }, change);
+    await this.updateOne({ _id: { $in: userid } }, { $set: change });
     const aggregate = await this.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(userid) } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'friends',
-          foreignField: '_id',
-          pipeline: [{ $project: { firstName: 1, lastName: 1, avatar: 1 } }],
-          as: 'friends',
-        }
-      },
-      // { $unwind: "$friends"}
-      { $project: { password: 0, birth: 0, createdAt: 0, updatedAt: 0, refreshToken: 0 } },
+      { $project: { password: 0, createdAt: 0, updatedAt: 0, refreshToken: 0 } },
     ]);
     return aggregate[0];
   } catch (error) {
