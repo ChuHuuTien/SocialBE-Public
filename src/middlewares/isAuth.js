@@ -29,24 +29,4 @@ exports.isAuth = async (req, res, next) => {
 			}
 		}
 	}
-	// if (!accessTokenFromHeader) {
-	// 	return res.status(401).json({ message: 'Không tìm thấy access token!' });
-	// } else {
-
-	// 	const accessTokenSecret =
-	// 		process.env.ACCESS_TOKEN_SECRET || jwtVariable.accessTokenSecret;
-
-	// 	const verified = await authMethod.verifyToken(
-	// 		accessTokenFromHeader,
-	// 		accessTokenSecret,
-	// 	);
-	// 	if (!verified) {
-	// 		return res.status(401).json({ message: 'Bạn không có quyền truy cập vào tính năng này!' });
-	// 	}
-
-	// 	// email, userid
-	// 	req.user = verified.payload;
-
-	// 	return next();
-	// }
 };
