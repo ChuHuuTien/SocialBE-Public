@@ -13,8 +13,8 @@ const userSchema = new Schema({
   avatar: { type: String, require: true, default: 'https://res.cloudinary.com/dckxgux3k/image/upload/v1690426439/Avatar/avatar-icon-2_blug9u.png' },
   coverImage: { type: String, require: false, default: null },
   description: { type: String, require: false, default: null },
-  follower: [{ _id: false, type: Schema.Types.ObjectId, ref: 'user' }],
-  following: [{ _id: false, type: Schema.Types.ObjectId, ref: 'user' }],
+  follower: [{ type: Object, default: [] }],
+  following: [{ type: Object, default: [] }],
   isNewAccount: { type: Boolean, require: false, default: true },
   emailVerify: { type: Boolean, require: false, default: false },
   refreshToken: { type: String, require: false, }
@@ -133,14 +133,47 @@ userSchema.statics.createUser = async function (user) {
  * @param {String} friendid - friendid
  * @return {boolean}
  */
-userSchema.statics.updateFriend = async function (userid, friendid) {
+userSchema.statics.follow = async function (userId, friendId) {
   try {
-    const result = await this.find({ _id: userid, friends: { $all: friendid } });
-    if (!result.length) {
-      await this.updateOne({ _id: userid }, { $push: { friends: friendid } })
+    const user = await this.getUserById(userId);
+    const friend = await this.getUserById(friendId);
+    const following = user.following;
+    const follower = friend.follower;
+    following.push({
+      id: friend._id,
+      name: friend.name,
+      avatar: friend.avatar
+    });
+
+    follower.push({
+      id: user._id,
+      name: user.name,
+      avatar: user.avatar
+    });
+    await this.updateOne({ _id: { $in: userId } }, {
+      $set: {
+        "following": following
+      }
+    });
+
+    await this.updateOne({ _id: { $in: friendId } }, {
+      $set: {
+        "follower": follower
+      }
+    });
+  } catch (error) {
+    return error;
+  }
+}
+
+userSchema.statics.isFollowing = async function (userId, friendId) {
+  try {
+    const user = await this.getUserById(userId);
+    const following = user.following;
+
+    if (following.filter(x => x.id == friendId).length > 0) {
       return true;
     } else {
-      await this.updateOne({ _id: userid }, { $pull: { friends: friendid } })
       return false;
     }
   } catch (error) {
@@ -148,18 +181,30 @@ userSchema.statics.updateFriend = async function (userid, friendid) {
   }
 }
 
-userSchema.statics.isFriend = async function (userid, friendid) {
+userSchema.statics.unfollow = async function (userId, friendId) {
   try {
-    const result = await this.find({ _id: userid, friends: { $all: friendid } });
-    if (!result.length) {
-      return false;
-    } else {
-      return true;
-    }
+    const user = await this.getUserById(userId);
+    const friend = await this.getUserById(friendId);
+    const following = user.following;
+    const follower = friend.follower;
+    following.splice(following.findIndex(a => a.id === friendId), 1);
+    follower.splice(follower.findIndex(a => a.id === userId), 1);
+    await this.updateOne({ _id: { $in: userId } }, {
+      $set: {
+        "following": following
+      }
+    });
+
+    await this.updateOne({ _id: { $in: friendId } }, {
+      $set: {
+        "follower": follower
+      }
+    });
   } catch (error) {
     return error;
   }
 }
+
 /**
  * @param {String} userid - id of user
  * @return {Object} user who have this userid

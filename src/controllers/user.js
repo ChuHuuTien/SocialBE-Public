@@ -76,46 +76,25 @@ class userController {
   }
   // [POST] /user/updatefriend
   async postUpdateFriend(req, res, next) {
-    const userid = req.user.userid;
-    const friendid = req.body.friendid;
-    const isAccept = req.body.isAccept;
-    //3 việc: tạo request mới, chập nhận, từ chối
+    const userId = req.body.userId;
+    const friendId = req.body.friendId;
     try {
-      const isFriend = await User.isFriend(userid, friendid);
-      if (isFriend) {
-        //Đã kết bạn và hủy kết bạn
-        await User.updateFriend(userid, friendid);
-        await User.updateFriend(friendid, userid);
-        const result = await User.getFriendById(userid);
-        res.status(200).json({ message: "Unfriend success", friends: result.friends });
-      } else {
-        //Kiểm tra có yêu cầu kết bạn hay không
-        const isExist = await FriendRequest.findFriendRequest(friendid, userid);
-        if (isExist) {
-          if (isAccept) {
-
-            //Chấp nhận kết bạn 
-            await User.updateFriend(userid, friendid);
-            await User.updateFriend(friendid, userid);
-            await FriendRequest.deleteFriendRequest(friendid, userid);
-            const result = await User.getFriendById(userid);
-            res.status(200).json({ message: "Accept Friend require", friends: result.friends });
-          } else {
-            //Hủy yêu cầu kết bạn 
-            await FriendRequest.deleteFriendRequest(friendid, userid);
-            const result = await User.getFriendById(userid);
-            res.status(200).json({ message: "Deny Friend require", friends: result.friends });
-          }
+      const isFollowing = await User.isFollowing(userId, friendId);
+      if (!isFollowing || isFollowing == null) {
+        const resData = await User.follow(userId, friendId);
+        if (!resData) {
+          res.status(200).json({ message: "follow success", });
         } else {
-          const newRequest = {
-            sender: userid,
-            receiver: friendid,
-          };
-          await FriendRequest.createFriendRequest(newRequest);
-          res.status(200).json({ message: "Add request success" });
+          res.status(400).json({ message: "follow fail" });
+        }
+      } else {
+        const resData = await User.unfollow(userId, friendId);
+        if (!resData) {
+          res.status(200).json({ message: "unfollow success", });
+        } else {
+          res.status(400).json({ message: "unfollow fail" });
         }
       }
-
     } catch (err) {
       res.status(400).json({ err: err });
     }
@@ -193,11 +172,11 @@ class userController {
   //[DELETE] /user/delete
   async deleteUser(req, res, next) {
     try {
-      const {id} = req.query;
+      const { id } = req.query;
 
       const findUserResult = await User.getUserById(id);
-  
-      if(findUserResult) {
+
+      if (findUserResult) {
         const deleteRes = await User.deleteUser(findUserResult._id);
         if (!deleteRes) {
           res.status(200).json({ message: "delete successful" });
