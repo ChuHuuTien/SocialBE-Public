@@ -4,7 +4,7 @@ const router = express.Router();
 const postController = require('../controllers/post');
 
 router.get('/news', postController.getNews);
-router.get('/all/:userid', postController.getPostsByUser);
+router.get('/all', postController.getPostsByUser);
 router.get('/:postid', postController.getPost);
 router.get('/:postid/comments', postController.getCommentsByPost);
 

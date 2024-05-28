@@ -4,7 +4,7 @@ const router = express.Router();
 const userController = require('../controllers/user');
 
 router.get('/all', userController.getAllUser);
-router.get('/listfollow', userController.getListFollow);
+router.get('/listuser', userController.getListUser);
 router.get('/info', userController.getUser);
 
 router.post('/follow', userController.followUser);

@@ -53,8 +53,8 @@ class userController {
     }
   }
 
-  // [GET] /user/listfollow
-  async getListFollow(req, res, next) {
+  // [GET] /user/listuser
+  async getListUser(req, res, next) {
     const listId = req.body.listId;
     const options = {
       page: (req.query.page) || 0,
