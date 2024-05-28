@@ -4,13 +4,10 @@ const router = express.Router();
 const userController = require('../controllers/user');
 
 router.get('/all', userController.getAllUser);
-router.get('/:userid', userController.getUser);
-router.get('/:userid/friends', userController.getUserFriend);
-router.get('/friend/myrequest', userController.getMyRequest);
-router.get('/friend/request', userController.getFriendRequest);
+router.get('/listfollow', userController.getListFollow);
+router.get('/info', userController.getUser);
 
-
-router.post('/updatefriend', userController.postUpdateFriend);
+router.post('/follow', userController.followUser);
 router.post('/updateuser', userController.postUpdateUser);
 router.post('/resetpass', userController.postResetPass);
 router.delete('/delete', userController.deleteUser);
