@@ -34,8 +34,8 @@ Public API: https://socialbe-gbu6.onrender.com/
 
 ### User `/user`
 
--   `[GET] /:userid`: get thông tin user theo id.
-    -   param: {userid: String}.
+-   `[GET] /info`: get thông tin user theo id.
+    -   query: {id: String}.
     -   result: {
         message: String, 
         user: {
@@ -69,22 +69,10 @@ Public API: https://socialbe-gbu6.onrender.com/
         message: String, 
         }.
 
--   `[GET] /:id/friend`: get danh sách bạn.
-    -   param: {id: String}.
-    -   result: {
-        message: String, 
-        friends: [{
-            _id: String, 
-            firstName: String, 
-            lastName: String, 
-            avatar: String
-            }]
-        }.
--   `[GET] /friend/myrequest`: get danh sách yêu cầu kết bạn mà mình gửi.
-    -   result: { myRequest: {Ids: [_id: String]} }.
-    `[GET] /friend/request`: get danh sách yêu cầu kết bạn.
+-    `[GET] /listfollow`: get danh sách follow
+    -   body: listId (String), page (int) , limit(int)
     -   result: { 
-        friendrequest: 
+        users: 
             { users: 
                 [_id: String, 
                 firstName: String, l
@@ -92,9 +80,9 @@ Public API: https://socialbe-gbu6.onrender.com/
                 avatar: String
                 ]}
             }.
--   `[POST] /updatefriend`: cập nhật danh sách bạn.
-    -   body: {friendid: String, isAccept: boolean}.
-    -   result: {message: String, friends: [{}]}.
+-   `[POST] /follow`: cập nhật danh sách follow.
+    -   body: {friendId: String, userId: String}.
+    -   result: {message: String, user: [{}]}.
 -   `[POST] /updateuser`: cập nhật thông tin user.
     -   body: {
             firstName: String, 

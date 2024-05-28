@@ -55,10 +55,10 @@ userSchema.statics.getUserById = async function (userid) {
  * @param {Array} ids, string of user ids
  * @return {Array of Objects} users list
  */
-userSchema.statics.getUserByIds = async function (ids) {
+userSchema.statics.getUserByIds = async function (ids, options) {
   try {
-    const users = await this.find({ _id: { $in: ids } }, { name: 1, avatar: 1 });
-    return users.toObject();
+    const users = await this.find({ _id: { $in: ids } }, { name: 1, avatar: 1 }).skip(options.page).limit(options.limit);
+    return users;
   } catch (error) {
     throw error;
   }
@@ -139,17 +139,9 @@ userSchema.statics.follow = async function (userId, friendId) {
     const friend = await this.getUserById(friendId);
     const following = user.following;
     const follower = friend.follower;
-    following.push({
-      id: friend._id,
-      name: friend.name,
-      avatar: friend.avatar
-    });
+    following.push(friend._id);
 
-    follower.push({
-      id: user._id,
-      name: user.name,
-      avatar: user.avatar
-    });
+    follower.push(user._id);
     await this.updateOne({ _id: { $in: userId } }, {
       $set: {
         "following": following
@@ -161,8 +153,14 @@ userSchema.statics.follow = async function (userId, friendId) {
         "follower": follower
       }
     });
+
+    const aggregate = await this.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+      { $project: { password: 0, createdAt: 0, updatedAt: 0, refreshToken: 0 } },
+    ]);
+    return aggregate[0];
   } catch (error) {
-    return error;
+    throw error;
   }
 }
 
@@ -171,7 +169,7 @@ userSchema.statics.isFollowing = async function (userId, friendId) {
     const user = await this.getUserById(userId);
     const following = user.following;
 
-    if (following.filter(x => x.id == friendId).length > 0) {
+    if (following.includes(friendId)) {
       return true;
     } else {
       return false;
@@ -200,8 +198,14 @@ userSchema.statics.unfollow = async function (userId, friendId) {
         "follower": follower
       }
     });
+
+    const aggregate = await this.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+      { $project: { password: 0, createdAt: 0, updatedAt: 0, refreshToken: 0 } },
+    ]);
+    return aggregate[0];
   } catch (error) {
-    return error;
+    throw error;
   }
 }
 
