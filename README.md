@@ -69,7 +69,7 @@ Public API: https://socialbe-gbu6.onrender.com/
         message: String, 
         }.
 
--    `[GET] /listfollow`: get danh sách follow
+-    `[GET] /listuser`: get danh sách user theo list id
     -   body: listId (String), page (int) , limit(int)
     -   result: { 
         users: 
