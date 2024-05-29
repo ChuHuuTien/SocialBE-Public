@@ -41,10 +41,16 @@ exports.postVerifyOtp = async (req, res, next) => {
   const otp = req.body.otp;
 
   const verify = await UserVerify.verifyEmail(email, otp);
+  const user = await User.getUserbyEmail(email);
   if (verify) {
     const verifySuccess = await UserVerify.verifySuccess(email);
-    if (verifySuccess) res.status(200).json({ success: true, message: `OTP vefified successfully!` });
-    else res.status(400).json({ message: `Something went wrong!` });
+    if (verifySuccess) {
+      await User.updateOne({ _id: user._id }, { emailVerify: true });
+      res.status(200).json({ success: true, message: `OTP vefified successfully!` });
+    }
+    else {
+      res.status(400).json({ message: `Something went wrong!` });
+    }
   } else {
     res.status(400).json({ success: false, message: `OTP vefified fail!` });
   }
@@ -99,11 +105,13 @@ exports.postRegister = async (req, res, next) => {
           accessTokenLife
         );
         let refreshToken = randToken.generate(jwtVariable.refreshTokenSize); // tạo 1 refresh token ngẫu nhiên
-        return res.status(201).json({ user: {
-          ...createUser,
-          token: accessToken,
-          refreshToken: refreshToken
-        } });
+        return res.status(201).json({
+          user: {
+            ...createUser,
+            token: accessToken,
+            refreshToken: refreshToken
+          }
+        });
       }
     } catch (err) {
       return res.status(409).json({ err: err });
@@ -165,7 +173,7 @@ exports.postLogin = async (req, res, next) => {
 exports.postReset = async (req, res, next) => {
   const oldpassword = req.body.oldPassword;
   const newPassword = req.body.newPassword;
-  const user = await User.findById(req.userid);
+  const user = await User.findById(req.body.userId);
   if (!user) {
     return res.status(401).json({ message: "Tài khoản không tồn tại." });
   }
@@ -174,14 +182,15 @@ exports.postReset = async (req, res, next) => {
     return res.status(401).json({ error: "Mật khẩu không chính xác." });
   } else {
     const hashPassword = bcrypt.hashSync(newPassword, SALT_ROUNDS);
-    User.updateOne({ _id: req.userid }, { password: hashPassword })
+    await User.updateOne({ _id: req.body.userId }, { password: hashPassword })
     res.status(200).json({ message: "Đổi mật khẩu thành công." });
   }
 }
 
 exports.refreshToken = async (req, res) => {
   // Lấy access token từ header
-  const accessTokenFromHeader = req.headers.authorization;
+  const authHeader = req.headers['authorization'];
+  const accessTokenFromHeader = authHeader && authHeader.split(' ')[1];
   if (!accessTokenFromHeader) {
     return res.status(400).json({ message: 'Không tìm thấy access token.' });
   }
@@ -208,7 +217,7 @@ exports.refreshToken = async (req, res) => {
 
   const email = decoded.payload.email; // Lấy username từ payload
 
-  const user = await User.getUserbyNumber(email);
+  const user = await User.getUserbyEmail(email);
   if (!user) {
     return res.status(401).json({ message: 'User không tồn tại.' });
   }

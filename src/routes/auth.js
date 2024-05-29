@@ -7,12 +7,12 @@ const authController = require('../controllers/auth');
 router.post('/register', authController.postRegister);
 router.post('/login', authController.postLogin);
 
-router.post('/sendotp', authController.postSendOtp);
-router.post('/verifyotp', authController.postVerifyOtp);
-router.post('/reset',authController.postReset);
-router.post('/forgot', authController.postForgot);
+router.post('/send-otp', authController.postSendOtp);
+router.post('/verify-otp', authController.postVerifyOtp);
+router.post('/reset-password',authController.postReset);
+router.post('/forgot-password', authController.postForgot);
 
-router.post('/refresh',authController.refreshToken);
+router.post('/refresh-token',authController.refreshToken);
 
 
 

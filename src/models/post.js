@@ -31,24 +31,13 @@ postSchema.statics.getPostById = async function (postid) {
       {
         $lookup: {
           from: 'users',
-          localField: 'creatorId',
-          pipeline: [{ $project: { firstName: 1, lastName: 1, avatar: 1 } }],
+          localField: 'authorId',
+          pipeline: [{ $project: { name: 1, avatar: 1 } }],
           foreignField: '_id',
-          as: 'postedByUser',
+          as: 'author',
         }
       },
-      { $unwind: "$postedByUser" },
-      {
-        $lookup: {
-          from: "users",
-          localField: 'likes',
-          pipeline: [{ $project: { firstName: 1, lastName: 1 } }],
-          foreignField: '_id',
-          as: "likesByUsers"
-        }
-
-      },
-      { $project: { likes: 0, updatedAt: 0, } }
+      { $unwind: "$author" }
     ])
     return aggregate[0];
   } catch (error) {
@@ -101,24 +90,13 @@ postSchema.statics.updatePost = async function (postid, change) {
       {
         $lookup: {
           from: 'users',
-          localField: 'creatorId',
-          pipeline: [{ $project: { firstName: 1, lastName: 1, avatar: 1 } }],
+          localField: 'authorId',
+          pipeline: [{ $project: { name: 1, avatar: 1 } }],
           foreignField: '_id',
-          as: 'postedByUser',
+          as: 'author',
         }
       },
-      { $unwind: "$postedByUser" },
-      {
-        $lookup: {
-          from: "users",
-          localField: 'likes',
-          pipeline: [{ $project: { firstName: 1, lastName: 1 } }],
-          foreignField: '_id',
-          as: "likesByUsers"
-        }
-
-      },
-      { $project: { likes: 0, updatedAt: 0, } }
+      { $unwind: "$author" },
     ])
     return aggregate[0];
   } catch (error) {
@@ -148,8 +126,22 @@ postSchema.statics.createPost = async function (post) {
  */
 postSchema.statics.getPostsByAuthorId = async function (userid, options) {
   try {
-   const posts = await this.find({ authorId: { $in: userid } }).skip(options.page).limit(options.limit);
-   return posts;
+    const aggregate = await this.aggregate(
+      [{ $match: { authorId: new mongoose.Types.ObjectId(userid) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'authorId',
+          pipeline: [{ $project: { name: 1, avatar: 1 } }],
+          foreignField: '_id',
+          as: 'author',
+        }
+      },
+      { $unwind: "$author" },
+      { $sort: { createdAt: -1 } },
+      { $skip: parseInt(options.page - 1) },
+      { $limit: parseInt(options.limit) },]);
+    return aggregate;
   } catch (error) {
     throw error;
   }
@@ -158,35 +150,24 @@ postSchema.statics.getPostsByAuthorId = async function (userid, options) {
  * @param {Object} post
  * @returns {Object} new post object created
 */
-postSchema.statics.getPostByFriendIds = async function (friendids, options) {
+postSchema.statics.getPostByFriendIds = async function (friendIds, options) {
   try {
     const aggregate = await this.aggregate([
-      { $match: { creatorId: { $in: friendids } } },
+      { $match: { authorId: { $in: friendIds } } },
       { $sort: { createdAt: -1 } },
       {
         $lookup: {
           from: 'users',
-          localField: 'creatorId',
-          pipeline: [{ $project: { firstName: 1, lastName: 1, avatar: 1 } }],
+          localField: 'authorId',
+          pipeline: [{ $project: { name: 1, avatar: 1 } }],
           foreignField: '_id',
-          as: 'postedByUser',
+          as: 'author',
         }
       },
-      { $unwind: "$postedByUser" },
-      {
-        $lookup: {
-          from: "users",
-          localField: 'likes',
-          pipeline: [{ $project: { firstName: 1, lastName: 1 } }],
-          foreignField: '_id',
-          as: "likesByUsers"
-        }
-      },
-      { $skip: options.page * options.limit },
-      { $limit: options.limit },
-      { $project: { likes: 0, updatedAt: 0, } }
-
-    ])
+      { $unwind: "$author" },
+      { $skip: parseInt(options.page - 1) },
+      { $limit: parseInt(options.limit) }
+    ]);
     return aggregate;
   } catch (error) {
     throw error;

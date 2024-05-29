@@ -8,24 +8,19 @@ const { options } = require('../routes/post');
 
 class postController {
 
-  // [GET] /post/:postid
+  // [GET] /post/details/:postId
   async getPost(req, res, next) {
-    const postid = req.params.postid;
+    const postId = req.params.postId;
     try {
-      const post = await Post.getPostById(postid);
-      const options = {
-        page: parseInt(req.query.page) || 0,
-        limit: parseInt(req.query.limit) || 10,
-      };
-      const comments = await Comment.getCommentsByPostId(postid, options);
-      res.status(200).json({ message: "Success", post: post, comments: comments });
+      const post = await Post.getPostById(postId);
+      res.status(200).json({ message: "Success", post: post });
 
     } catch (err) {
       res.status(400).json({ err: err });
     }
   }
 
-  // [GET] /post/all
+  // [GET] /post/by-user
   async getPostsByUser(req, res, next) {
     const userId = req.query.userId;
     const options = {
@@ -54,7 +49,8 @@ class postController {
       if (!createPost) {
         return res.status(400).josn({ message: "Có lỗi trong quá trình tạo bài viết, vui lòng thử lại." });
       }
-      return res.status(201).json({ post: createPost });
+      const post = await Post.getPostById(createPost._id);
+      return res.status(201).json({ post: post });
     } catch (error) {
       console.log(error)
       res.status(409).json({ error: error });
@@ -64,8 +60,8 @@ class postController {
   // [POST] /post/like
   async postLike(req, res, next) {
     try {
-      const postid = req.body.postid;
-      const currentLoggedUser = req.user.userid;
+      const postid = req.body.postId;
+      const currentLoggedUser = req.body.userId;
       const status = await Post.likePost(postid, currentLoggedUser);
       const post = await Post.getPostById(postid);
       if (post) {
@@ -80,7 +76,7 @@ class postController {
   // [POST] /post/update
   async postUpdate(req, res, next) {
     try {
-      const postid = req.body.postid;
+      const postid = req.body.postId;
       const body = req.body;
       const post = await Post.updatePost(postid, body);
       if (post) {
@@ -118,8 +114,8 @@ class postController {
     try {
       const postid = req.params.postid;
       const options = {
-        page: parseInt(req.query.page) || 0,
-        limit: parseInt(req.query.limit) || 100,
+        page: (req.query.page) || 1,
+        limit: (req.query.limit) || 10,
       };
 
       const Comments = await Comment.getCommentsByPostId(postid, options);
@@ -132,16 +128,13 @@ class postController {
   // [GET] /post/getNews
   async getNews(req, res, next) {
     try {
-      const userid = req.user.userid;
-      const result = await User.getFriendById(userid);
-      const friendids = new Array();
-      result.friends.map((friend) => {
-        friendids.push(friend._id);
-      })
-      friendids.push(new mongoose.Types.ObjectId(userid));
+      const userId = req.body.userId;
+      const result = await User.getUserById(userId);
+      const friendids = result.following;
+      friendids.push(new mongoose.Types.ObjectId(userId));
       const options = {
-        page: parseInt(req.query.page) || 0,
-        limit: parseInt(req.query.limit) || 10,
+        page: (req.query.page) || 1,
+        limit: (req.query.limit) || 10,
       };
       const news = await Post.getPostByFriendIds(friendids, options);
       return res.status(201).json({ news });
