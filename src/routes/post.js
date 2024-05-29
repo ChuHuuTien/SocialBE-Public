@@ -4,8 +4,8 @@ const router = express.Router();
 const postController = require('../controllers/post');
 
 router.get('/news', postController.getNews);
-router.get('/all', postController.getPostsByUser);
-router.get('/:postid', postController.getPost);
+router.get('/by-user', postController.getPostsByUser);
+router.get('/details/:postId', postController.getPost);
 router.get('/:postid/comments', postController.getCommentsByPost);
 
 router.post('/create', postController.createPost);

@@ -53,7 +53,7 @@ class userController {
     }
   }
 
-  // [GET] /user/listuser
+  // [GET] /user/list-user
   async getListUser(req, res, next) {
     const listId = req.body.listId;
     const options = {
@@ -71,7 +71,7 @@ class userController {
     }
   }
 
-  // [POST] /user/postUpdateUser
+  // [POST] /user/update-user
   async postUpdateUser(req, res, next) {
     const id = req.query.id;
     const body = req.body;
@@ -83,31 +83,6 @@ class userController {
     } catch (err) {
       res.status(400).json({ err: err });
       console.log(err);
-    }
-  }
-
-  // [POST] /user/resetpass
-  async postResetPass(req, res, next) {
-    const userid = req.query.id;
-    const oldPassword = req.body.oldPassword;
-    const newPassword = req.body.newPassword;
-    console.log(req.body);
-    const user = await User.getUserToChangePass(userid);
-    if (!user) {
-      return res.status(401).json({ error: "No one exist with this id" });
-    }
-    const isPasswordValid = bcrypt.compareSync(oldPassword, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Mật khẩu không chính xác." });
-    }
-    try {
-      const hashPassword = bcrypt.hashSync(newPassword, SALT_ROUNDS);
-      const user = await User.updatePassword(userid, hashPassword);
-      if (user) {
-        res.status(200).json({ message: "Reset Password success", user: user });
-      } else res.status(400).json({ message: "Reset Password fail" });
-    } catch (err) {
-      res.status(400).json({ err: err });
     }
   }
 
