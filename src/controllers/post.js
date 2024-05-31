@@ -13,10 +13,10 @@ class postController {
     const postId = req.params.postId;
     try {
       const post = await Post.getPostById(postId);
-      res.status(200).json({ message: "Success", post: post });
+      res.status(200).json({ message: "Success", data: post });
 
     } catch (err) {
-      res.status(400).json({ err: err });
+      res.status(400).json({ message: err });
     }
   }
 
@@ -29,9 +29,9 @@ class postController {
     };
     try {
       const posts = await Post.getPostsByAuthorId(userId, options);
-      res.status(200).json({ message: "Success", posts: posts });
+      res.status(200).json({ message: "Success", data: posts });
     } catch (err) {
-      res.status(400).json({ err: err });
+      res.status(400).json({ message: err });
     }
   }
 
@@ -47,13 +47,13 @@ class postController {
       }
       const createPost = await Post.createPost(newPost);
       if (!createPost) {
-        return res.status(400).josn({ message: "Có lỗi trong quá trình tạo bài viết, vui lòng thử lại." });
+        return res.status(400).josn({ message: "There was an error creating the post, please try again" });
       }
       const post = await Post.getPostById(createPost._id);
-      return res.status(201).json({ post: post });
+      return res.status(200).json({ data: post });
     } catch (error) {
       console.log(error)
-      res.status(409).json({ error: error });
+      res.status(400).json({ message: error });
     }
   }
 
@@ -65,9 +65,9 @@ class postController {
       const status = await Post.likePost(postid, currentLoggedUser);
       const post = await Post.getPostById(postid);
       if (post) {
-        return res.status(201).json({ status, post });
+        return res.status(200).json({ status, data: post });
       } else {
-        return res.status(400).json({ error: "error when like post" });
+        return res.status(400).json({ data: "error when like post" });
       }
     } catch (error) {
       res.status(409).json({ error });
@@ -80,7 +80,7 @@ class postController {
       const body = req.body;
       const post = await Post.updatePost(postid, body);
       if (post) {
-        res.status(200).json({ message: "Update post success", post: post });
+        res.status(200).json({ message: "Update post success", data: post });
       } else res.status(400).json({ message: "Update post fail" });
     } catch (error) {
       res.status(409).json({ error });

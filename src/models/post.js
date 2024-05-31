@@ -55,10 +55,10 @@ postSchema.statics.likePost = async function (postid, userid) {
     const result = await this.find({ _id: postid, likes: { $all: userid } });
     if (!result.length) {
       await this.updateOne({ _id: postid }, { $push: { likes: userid } })
-      return { message: "Like post success" };
+      return { message: "Like" };
     } else {
       await this.updateOne({ _id: postid }, { $pull: { likes: userid } })
-      return { message: "Unlike post success" };
+      return { message: "Unlike" };
     }
   } catch (error) {
     throw error;

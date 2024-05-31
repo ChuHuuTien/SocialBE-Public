@@ -16,23 +16,17 @@ require('dotenv').config();
 
 exports.postSendOtp = async (req, res, next) => {
   const email = req.body.email;
-  const otp = `${(100000 + Math.random() * 900000).toFixed(0)}`
-  if (!validateEmail(email)) {
-    return res.status(400).json({ message: `Validate email fail!` });
-  }
+  const otp = `${(100000 + Math.random() * 900000).toFixed(0)}`;
   const user = await User.getUserbyEmail(email);
   if (!user) {
-    return res.status(409).json({ message: "Không tìm thấy email này trên hệ thống" })
-  }
-  const existEmail = await UserVerify.getUserVerifybyEmail(email);
-  if (existEmail) {
-    return res.status(409).json({ message: "Email này đang chờ để nhập mã xác thực, vui lòng thử lại sau 5 phút" })
-  }
-  const result = sendMail(email, otp);
-  if (result) {
-    res.json({ message: 'success', email: email });
+    return res.status(400).json({ data: "This email was not found on the system" })
   } else {
-    res.json({ message: 'fail' })
+    const result = sendMail(email, otp);
+    if (result) {
+      res.status(200).json({ data: 'success send OTP to email ' + email });
+    } else {
+      res.status(400).json({ data: 'error send OTP to email ' + + email })
+    }
   }
 }
 
@@ -46,38 +40,39 @@ exports.postVerifyOtp = async (req, res, next) => {
     const verifySuccess = await UserVerify.verifySuccess(email);
     if (verifySuccess) {
       await User.updateOne({ _id: user._id }, { emailVerify: true });
-      res.status(200).json({ success: true, message: `OTP vefified successfully!` });
+      res.status(200).json({ data: `OTP vefified successfully!` });
     }
     else {
-      res.status(400).json({ message: `Something went wrong!` });
+      res.status(400).json({ data: `Something went wrong!` });
     }
   } else {
-    res.status(400).json({ success: false, message: `OTP vefified fail!` });
+    res.status(400).json({ data: `OTP vefified fail!` });
   }
 }
 
 exports.postForgot = async (req, res, next) => {
-  const NewPassword = req.body.password;
+  const newPassword = req.body.password;
   const email = req.body.email;
 
-  const hashPassword = bcrypt.hashSync(NewPassword, SALT_ROUNDS);
+  const hashPassword = bcrypt.hashSync(newPassword, SALT_ROUNDS);
   const user = await User.getUserbyEmail(email);
   try {
-    await User.updateOne({ _id: user._id }, { password: hashPassword })
-    res.status(200).json({ success: true, message: "Đổi mật khẩu thành công." });
+    if (user) {
+      await User.updateOne({ _id: user._id }, { password: hashPassword })
+      res.status(200).json({ data: "Your password has been changed successfully" });
+    } else {
+      res.status(400).json({ data: `This email was not found on the system` });
+    }
   } catch (error) {
-    res.status(400).json({ message: `Đổi mật khẩu không thành công.` });
+    res.status(400).json({ data: `There was an error during processing` });
   }
 }
 
 exports.postRegister = async (req, res, next) => {
   const email = req.body.email;
   const name = req.body.name;
-  if (!validateEmail(email)) {
-    return res.status(400).json({ message: `Validate email fail!` });
-  }
   const user = await User.getUserbyEmail(email);
-  if (user) res.status(409).json({ message: "Email này đã dùng để đăng kí tài khoản." });
+  if (user) res.status(400).json({ data: "This email already exists on the system" });
   else {
     const hashPassword = bcrypt.hashSync(req.body.password, SALT_ROUNDS);
     const newUser = {
@@ -90,7 +85,7 @@ exports.postRegister = async (req, res, next) => {
       if (!createUser) {
         return res
           .status(400)
-          .josn({ message: "Có lỗi trong quá trình tạo tài khoản, vui lòng thử lại." });
+          .json({ data: "There was an error creating the account, please try again" });
       } else {
         const accessTokenLife = process.env.ACCESS_TOKEN_LIFE || jwtVariable.accessTokenLife;
         const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET || jwtVariable.accessTokenSecret;
@@ -105,8 +100,8 @@ exports.postRegister = async (req, res, next) => {
           accessTokenLife
         );
         let refreshToken = randToken.generate(jwtVariable.refreshTokenSize); // tạo 1 refresh token ngẫu nhiên
-        return res.status(201).json({
-          user: {
+        return res.status(200).json({
+          data: {
             ...createUser,
             token: accessToken,
             refreshToken: refreshToken
@@ -114,7 +109,7 @@ exports.postRegister = async (req, res, next) => {
         });
       }
     } catch (err) {
-      return res.status(409).json({ err: err });
+      return res.status(400).json({ data: err });
     }
   }
 
@@ -126,11 +121,11 @@ exports.postLogin = async (req, res, next) => {
 
   const user = await User.getUserbyEmail(email);
   if (!user) {
-    return res.status(401).json({ error: "Email không tồn tại." });
+    return res.status(400).json({ data: "This email was not found on the system" });
   }
   const isPasswordValid = bcrypt.compareSync(password, user.password);
   if (!isPasswordValid) {
-    return res.status(401).json({ error: "Mật khẩu không chính xác." });
+    return res.status(400).json({ data: "Incorrect password" });
   }
 
   const accessTokenLife = process.env.ACCESS_TOKEN_LIFE || jwtVariable.accessTokenLife;
@@ -146,7 +141,7 @@ exports.postLogin = async (req, res, next) => {
     accessTokenLife
   );
   if (!accessToken) {
-    return res.status(401).json({ message: 'Đăng nhập không thành công, vui lòng thử lại.' });
+    return res.status(400).json({ data: 'Login failed, please try again' });
   }
 
   let refreshToken = randToken.generate(jwtVariable.refreshTokenSize); // tạo 1 refresh token ngẫu nhiên
@@ -159,9 +154,8 @@ exports.postLogin = async (req, res, next) => {
   }
   const resData = user.toObject();
   delete resData.password;
-  return res.json({
-    message: 'Đăng nhập thành công.',
-    user: {
+  return res.status(200).json({
+    data: {
       ...resData,
       token: accessToken,
       refreshToken: refreshToken
@@ -175,15 +169,15 @@ exports.postReset = async (req, res, next) => {
   const newPassword = req.body.newPassword;
   const user = await User.findById(req.body.userId);
   if (!user) {
-    return res.status(401).json({ message: "Tài khoản không tồn tại." });
+    return res.status(400).json({ data: "Account does not exist" });
   }
   const isPasswordValid = bcrypt.compareSync(oldpassword, user.password);
   if (!isPasswordValid) {
-    return res.status(401).json({ error: "Mật khẩu không chính xác." });
+    return res.status(400).json({ data: "Incorrect password" });
   } else {
     const hashPassword = bcrypt.hashSync(newPassword, SALT_ROUNDS);
     await User.updateOne({ _id: req.body.userId }, { password: hashPassword })
-    res.status(200).json({ message: "Đổi mật khẩu thành công." });
+    res.status(200).json({ data: "Password changed successfully" });
   }
 }
 
@@ -192,13 +186,13 @@ exports.refreshToken = async (req, res) => {
   const authHeader = req.headers['authorization'];
   const accessTokenFromHeader = authHeader && authHeader.split(' ')[1];
   if (!accessTokenFromHeader) {
-    return res.status(400).json({ message: 'Không tìm thấy access token.' });
+    return res.status(400).json({ data: 'Access token not found' });
   }
 
   // Lấy refresh token từ body
   const refreshTokenFromBody = req.body.refreshToken;
   if (!refreshTokenFromBody) {
-    return res.status(400).json({ message: 'Không tìm thấy refresh token.' });
+    return res.status(400).json({ data: 'No refresh token found' });
   }
 
   const accessTokenSecret =
@@ -212,18 +206,18 @@ exports.refreshToken = async (req, res) => {
     accessTokenSecret,
   );
   if (!decoded) {
-    return res.status(400).json({ message: 'Access token không hợp lệ.' });
+    return res.status(400).json({ data: 'Access token is invalid' });
   }
 
   const email = decoded.payload.email; // Lấy username từ payload
 
   const user = await User.getUserbyEmail(email);
   if (!user) {
-    return res.status(401).json({ message: 'User không tồn tại.' });
+    return res.status(400).json({ data: 'User does not exist' });
   }
 
   if (refreshTokenFromBody !== user.refreshToken) {
-    return res.status(400).json({ message: 'Refresh token không hợp lệ.' });
+    return res.status(400).json({ data: 'Refresh token is not valid' });
   }
 
   // Tạo access token mới
@@ -237,12 +231,18 @@ exports.refreshToken = async (req, res) => {
     accessTokenSecret,
     accessTokenLife,
   );
+
+  let refreshToken = randToken.generate(jwtVariable.refreshTokenSize);
+
   if (!accessToken) {
     return res
       .status(400)
-      .json({ message: 'Tạo access token không thành công, vui lòng thử lại.' });
+      .json({ data: 'Creating access token failed' });
   }
-  return res.json({
-    accessToken
+  return res.status(200).json({
+    data: {
+      accessToken: accessToken,
+      refreshToken: refreshToken
+    }
   });
 };
