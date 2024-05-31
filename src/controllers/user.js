@@ -9,10 +9,10 @@ class userController {
     const userid = req.query.id;
     try {
       const user = await User.getUserById(userid);
-      res.status(200).json({ message: "Success", user: user });
+      res.status(200).json({ data: user });
 
     } catch (err) {
-      res.status(400).json({ err: err });
+      res.status(400).json({ data: err });
     }
   }
 
@@ -20,10 +20,10 @@ class userController {
   async getAllUser(req, res, next) {
     try {
       const result = await User.getAllUser();
-      res.status(200).json({ message: "Success", users: result });
+      res.status(200).json({ data: result });
 
     } catch (err) {
-      res.status(400).json({ err: err });
+      res.status(400).json({ data: err });
     }
   }
 
@@ -36,16 +36,16 @@ class userController {
       if (!isFollowing || isFollowing == null) {
         const resData = await User.follow(userId, friendId);
         if (resData) {
-          res.status(200).json({ message: "follow success", user: resData });
+          res.status(200).json({ message: "follow success", data: resData });
         } else {
-          res.status(400).json({ message: "follow fail" });
+          res.status(400).json({ data: "Somthing went wrong" });
         }
       } else {
         const resData = await User.unfollow(userId, friendId);
         if (resData) {
-          res.status(200).json({ message: "unfollow success", user: resData });
+          res.status(200).json({ message: "unfollow success", data: resData });
         } else {
-          res.status(400).json({ message: "unfollow fail" });
+          res.status(400).json({ message: "Somthing went wrong" });
         }
       }
     } catch (err) {
@@ -63,7 +63,7 @@ class userController {
     try {
       const users = await User.getUserByIds(listId, options);
 
-      res.status(200).json({ users: users });
+      res.status(200).json({ data: users });
 
     } catch (err) {
       console.log(err);
@@ -78,7 +78,7 @@ class userController {
     try {
       const user = await User.updateUser(id, body);
       if (user) {
-        res.status(200).json({ message: "Update user success", user: user });
+        res.status(200).json({ message: "Update user success", data: user });
       } else res.status(400).json({ message: "Update user fail" });
     } catch (err) {
       res.status(400).json({ err: err });
@@ -96,7 +96,7 @@ class userController {
       if (findUserResult) {
         const deleteRes = await User.deleteUser(findUserResult._id);
         if (!deleteRes) {
-          res.status(200).json({ message: "delete successful" });
+          res.status(200).json({ data: "delete successful" });
         } else {
           res.status(400).json({ message: "delete fail" });
         }
