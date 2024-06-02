@@ -23,9 +23,9 @@ exports.postSendOtp = async (req, res, next) => {
   } else {
     const result = sendMail(email, otp);
     if (result) {
-      res.status(200).json({ data: 'success send OTP to email ' + email });
+      res.status(200).json({ data: 'Success send OTP to email ' + email });
     } else {
-      res.status(400).json({ data: 'error send OTP to email ' + + email })
+      res.status(400).json({ data: 'Error send OTP to email ' + + email })
     }
   }
 }
